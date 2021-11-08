@@ -1,6 +1,6 @@
 
 # From:
-#https://stackoverflow.com/questions/65347690/how-do-i-save-adddrawtoolbar-shapes-drawn-in-an-r-leaflet-shiny-map-so-i-can-re
+# https://stackoverflow.com/questions/65347690/how-do-i-save-adddrawtoolbar-shapes-drawn-in-an-r-leaflet-shiny-map-so-i-can-re
 
 
 library(shiny)
@@ -19,7 +19,7 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             fileInput("drawingfile", h4(strong("Input Drawing File")),
-                      accept = c('.shp', '.dbf', '.sbn','.sbx','.shx','.prj','.cpg', '.geojson'),
+                      accept = c('.shp', '.dbf', '.sbn','.sbx','.shx','.prj','.cpg', '.geojson', '.json'),
                       multiple = TRUE),
             selectInput('fileSave', "Select file type", choices = c("GeoJSON","ESRI Shapefile","CSV")),
             actionButton("printShapes", h5(strong("Generate Drawing File")))
@@ -31,24 +31,59 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
-    
     output$mymap <- renderLeaflet({
         leaflet() %>%
             addTiles(group = "Default", attribution = 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors') %>%
-            setView(lng = 151, lat = -33, zoom = 7) %>%
-            addDrawToolbar(targetGroup = "draw", position = "topleft", editOptions = editToolbarOptions(edit=TRUE))
+            setView(lng = 151,
+                    lat = -33,
+                    zoom = 7) %>%
+            addDrawToolbar(
+                targetGroup = "draw",
+                position = "topleft",
+                editOptions = editToolbarOptions(edit = TRUE)
+            )
     })
     # Generate Shape List Action Button
     observeEvent(input$printShapes, {
         shapedf <- data.frame()
         reactive(shapedf)
-        shapedf <-input$mymap_draw_all_features
-        sh <- sf::read_sf(jsonlite::toJSON(shapedf, force=TRUE, auto_unbox=TRUE, digits = NA))
-
-        # TODO convert output from leaflet draw to geojson or shapefile so it can be exported as a spatial file, not .csv
-        # NOTE: Using read_sf() with toJSON to convert the list works really well. But, the GeoJSON driver cannot overwrite itself through write_sf() 
+        shapedf <- input$mymap_draw_all_features
+        sh <-
+            sf::read_sf(jsonlite::toJSON(
+                shapedf,
+                force = TRUE,
+                auto_unbox = TRUE,
+                digits = NA
+            ))
         
-        shpwrite <- sf::write_sf(sh, dsn = getwd(), layer =  "Drawings", driver = input$fileSave, delete_layer = TRUE, append = FALSE)
+        # TODO convert output from leaflet draw to geojson or shapefile so it can be exported as a spatial file, not .csv
+        # NOTE: Using read_sf() with toJSON to convert the list works really well. But, the GeoJSON driver cannot overwrite itself through write_sf()
+        
+        if (input$fileSave == "GeoJSON") {
+            if(file.exists(paste0(getwd(), "/Drawings.geojson"))){
+                unlink(paste0(getwd(), "/Drawings.geojson"))
+            }
+            shpwrite <-
+                sf::st_write(
+                    sh,
+                    dsn = paste0(getwd(),"/Drawings.geojson"),
+                    driver = input$fileSave
+                )
+        }
+        else if (input$fileSave == "ESRI Shapefile") {
+            shpwrite <-
+                sf::write_sf(
+                    sh,
+                    dsn = getwd(),
+                    layer =  "Drawings",
+                    driver = input$fileSave,
+                    delete_layer = TRUE,
+                    append = FALSE
+                )
+        }
+        else if (input$fileSave == "CSV") {
+            
+        }
     })
     
     # Intake Shape CSV
@@ -56,6 +91,17 @@ server <- function(input, output, session) {
     observeEvent(input$drawingfile, {
         drawFile = input$drawingfile
         req(drawFile)
+        #Geojson
+        if(file_ext(drawFile) == "geojson" || file_ext(drawFile) == "json"){
+            uploaded <- st_read(dsn = drawFile$datapath)
+            uploaded <- st_transform(uploaded, crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
+        } 
+        # CSV
+        else if(file_ext(drawFile == "csv")){
+            
+        }
+        # Shapefile
+        else{
         uploadDirectory <- dirname(drawFile$datapath[1])
         previouswd <- getwd()
         setwd(uploadDirectory)
@@ -66,11 +112,11 @@ server <- function(input, output, session) {
         layerName <- sub(".dbf$", "", basename(drawFile$name[1]))
         uploaded <- st_read(dsn = uploadDirectory, layer = layerName)
         uploaded <- st_transform(uploaded, crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
-        
+        } 
         proxy <- leafletProxy("mymap", data = uploaded)
         proxy %>% addPolygons(group = "draw")
     })
-
+    
     # observeEvent(input$drawingFile, {
     #     drawFile <- input$drawingFile
     #     ext <- file_ext(drawFile$datapath)

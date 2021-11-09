@@ -13,22 +13,37 @@ library(jsonlite)
 
 sh <- data.frame()
 
-ui <- fluidPage(
-    titlePanel("Monitoring Plotter"),
-    
-    sidebarLayout(
-        sidebarPanel(
-            fileInput("drawingfile", h4(strong("Input Drawing File")),
-                      accept = c('.shp', '.dbf', '.sbn','.sbx','.shx','.prj','.cpg', '.geojson', '.json'),
-                      multiple = TRUE),
-            selectInput('fileSave', "Select file type", choices = c("GeoJSON","ESRI Shapefile","CSV")),
-            actionButton("printShapes", h5(strong("Generate Drawing File")))
-        ),
-    mainPanel(
-        leafletOutput("mymap", height = "1000px"),
-        )
-    )
-)
+ui <- fluidPage(titlePanel("Monitoring Plotter"),
+                
+                sidebarLayout(
+                    sidebarPanel(
+                        fileInput(
+                            "drawingfile",
+                            h4(strong("Input Drawing File")),
+                            accept = c(
+                                '.shp',
+                                '.dbf',
+                                '.sbn',
+                                '.sbx',
+                                '.shx',
+                                '.prj',
+                                '.cpg',
+                                '.geojson',
+                                '.json'
+                            ),
+                            multiple = TRUE
+                        ),
+                        selectInput(
+                            'fileSave',
+                            "Select file type",
+                            choices = c("GeoJSON", "ESRI Shapefile")
+                        ),
+                        actionButton("printShapes", h5(strong(
+                            "Generate Drawing File"
+                        )))
+                    ),
+                    mainPanel(leafletOutput("mymap", height = "1000px"),)
+                ))
 
 server <- function(input, output, session) {
     output$mymap <- renderLeaflet({
@@ -56,17 +71,14 @@ server <- function(input, output, session) {
                 digits = NA
             ))
         
-        # TODO convert output from leaflet draw to geojson or shapefile so it can be exported as a spatial file, not .csv
-        # NOTE: Using read_sf() with toJSON to convert the list works really well. But, the GeoJSON driver cannot overwrite itself through write_sf()
-        
         if (input$fileSave == "GeoJSON") {
-            if(file.exists(paste0(getwd(), "/Drawings.geojson"))){
+            if (file.exists(paste0(getwd(), "/Drawings.geojson"))) {
                 unlink(paste0(getwd(), "/Drawings.geojson"))
             }
             shpwrite <-
                 sf::st_write(
                     sh,
-                    dsn = paste0(getwd(),"/Drawings.geojson"),
+                    dsn = paste0(getwd(), "/Drawings.geojson"),
                     driver = input$fileSave
                 )
         }
@@ -82,37 +94,50 @@ server <- function(input, output, session) {
                 )
         }
         else if (input$fileSave == "CSV") {
-            
+            shpwrite <-
+                sf::write_sf(
+                    sh,
+                    dsn = paste0(getwd(), "/Drawings.csv"),
+                    driver = input$fileSave,
+                    delete_layer = TRUE,
+                    append = FALSE
+                )
         }
     })
     
-    # Intake Shape CSV
+    # Intake Spatial File
     
     observeEvent(input$drawingfile, {
         drawFile = input$drawingfile
         req(drawFile)
         #Geojson
-        if(file_ext(drawFile) == "geojson" || file_ext(drawFile) == "json"){
+        if (file_ext(drawFile) == "geojson" ||
+            file_ext(drawFile) == "json") {
             uploaded <- st_read(dsn = drawFile$datapath)
-            uploaded <- st_transform(uploaded, crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
-        } 
+            uploaded <-
+                st_transform(uploaded, crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
+        }
         # CSV
-        else if(file_ext(drawFile == "csv")){
-            
+        else if (file_ext(drawFile) == "csv") {
+            uploaded <- st_read(dsn = drawFile$datapath)
+            uploaded <-
+                st_transform(uploaded, crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
         }
         # Shapefile
         else{
-        uploadDirectory <- dirname(drawFile$datapath[1])
-        previouswd <- getwd()
-        setwd(uploadDirectory)
-        for (i in 1:nrow(drawFile)) {
-            file.rename(drawFile$datapath[i], drawFile$name[i])
+            uploadDirectory <- dirname(drawFile$datapath[1])
+            previouswd <- getwd()
+            setwd(uploadDirectory)
+            for (i in 1:nrow(drawFile)) {
+                file.rename(drawFile$datapath[i], drawFile$name[i])
+            }
+            setwd(previouswd)
+            layerName <- sub(".dbf$", "", basename(drawFile$name[1]))
+            uploaded <-
+                st_read(dsn = uploadDirectory, layer = layerName)
+            uploaded <-
+                st_transform(uploaded, crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
         }
-        setwd(previouswd)
-        layerName <- sub(".dbf$", "", basename(drawFile$name[1]))
-        uploaded <- st_read(dsn = uploadDirectory, layer = layerName)
-        uploaded <- st_transform(uploaded, crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
-        } 
         proxy <- leafletProxy("mymap", data = uploaded)
         proxy %>% addPolygons(group = "draw")
     })

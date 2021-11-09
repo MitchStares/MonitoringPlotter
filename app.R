@@ -138,8 +138,21 @@ server <- function(input, output, session) {
             uploaded <-
                 st_transform(uploaded, crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
         }
-        proxy <- leafletProxy("mymap", data = uploaded)
-        proxy %>% addPolygons(group = "draw")
+        proxy <- leafletProxy("mymap")
+        for (i in 1:nrow(uploaded)) {
+            featureType <- sf::st_geometry_type(uploaded[i,])
+            if(featureType == "POLYGON" || featureType == "MULTIPOLYGON"){
+                proxy %>% addPolygons(data = uploaded[i,],group = "draw")
+            }
+            if(featureType == "POINT" || featureType == "MULTIPOINT"){
+                proxy %>% addMarkers(data = uploaded[i,],group = "draw")
+            }
+            if(featureType == "LINESTRING" || featureType == "MULTILINESTRING") {
+                proxy %>% addPolylines(data = uploaded[i,], group = "draw")
+            }
+        }
+        
+        
     })
     
     # observeEvent(input$drawingFile, {

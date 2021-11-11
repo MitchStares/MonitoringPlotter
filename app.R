@@ -1,8 +1,4 @@
 
-# From:
-# https://stackoverflow.com/questions/65347690/how-do-i-save-adddrawtoolbar-shapes-drawn-in-an-r-leaflet-shiny-map-so-i-can-re
-
-
 library(shiny)
 library(leaflet)
 library(leaflet.extras)

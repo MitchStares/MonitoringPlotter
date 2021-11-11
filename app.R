@@ -151,10 +151,8 @@ server <- function(input, output, session) {
                 proxy %>% addPolylines(data = uploaded[i,], group = "draw")
             }
         }
-        
-        
     })
-    
+    leaflet() %>% addTiles() %>% leaflet.extras::addDrawToolbar()    
     # observeEvent(input$drawingFile, {
     #     drawFile <- input$drawingFile
     #     ext <- file_ext(drawFile$datapath)

@@ -54,7 +54,7 @@ server <- function(input, output, session) {
         clickData$clickedPolygon <- input$mymap_shape_click
         print(clickData$clickedPolygon$id)
         output$printText <- renderText({
-            print(paste0("latitude: ", clickData$clickedPolygon$lat, ", longitude: ", clickData$clickedPolygon$lng ))
+            print(paste0("latitude: ", clickData$clickedPolygon$lat, ", longitude: ", clickData$clickedPolygon$lng))
         })
     })
     
@@ -75,7 +75,8 @@ server <- function(input, output, session) {
                     digits = NA
                 )) 
             feature <- feature[which(feature$'X_leaflet_id' == clickData$clickedPolygon$id),]
-            print(feature)
+            grid <- makeGrid(feature)
+            proxy <- leafletProxy("mymap") %>% addPolygons(data = grid[[1]], group = "grids", color = "red")
         }
     })
     ## TODO: On click (above), store SOMETHING in a reactiveValue to reference against

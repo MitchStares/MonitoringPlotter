@@ -1,7 +1,7 @@
 ##App Testing##
 library(sf)
 library(ggplot2)
-poly <- read_sf(dsn = getwd(), layer = "Drawings")
+poly <- read_sf("Drawings.geojson")
 
 makeGrid <- function(data, gridsize = NA){
   gridList <- list()
@@ -45,6 +45,6 @@ selected <- selectPlots(grids[[1]], n=20)
 
 ggplot()+
   geom_sf(data = poly, colour = "black", alpha = 0.2)+
-  geom_sf(data = grids[[1]], colour = "red")+
+  geom_sf(data = grids[[4]], colour = "red", alpha = 0.1)+
   geom_sf(data = selected, colour = "blue", alpha = 0.1)
 

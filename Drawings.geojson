@@ -3,9 +3,9 @@
 "name": "Drawings",
 "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
 "features": [
-{ "type": "Feature", "properties": { "X_leaflet_id": 252, "feature_type": "marker" }, "geometry": { "type": "Point", "coordinates": [ 147.489163, -31.645365 ] } },
-{ "type": "Feature", "properties": { "X_leaflet_id": 261, "feature_type": "marker" }, "geometry": { "type": "Point", "coordinates": [ 149.535659, -33.276747 ] } },
-{ "type": "Feature", "properties": { "X_leaflet_id": 269, "feature_type": "rectangle" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 149.507366, -30.020185 ], [ 149.507366, -29.058914 ], [ 150.551048, -29.058914 ], [ 150.551048, -30.020185 ], [ 149.507366, -30.020185 ] ] ] ] } },
-{ "type": "Feature", "properties": { "X_leaflet_id": 277, "feature_type": "rectangle" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 148.740323, -32.010738 ], [ 148.740323, -30.713504 ], [ 149.997771, -30.713504 ], [ 149.997771, -32.010738 ], [ 148.740323, -32.010738 ] ] ] ] } }
+{ "type": "Feature", "properties": { "X_leaflet_id": 121, "feature_type": "rectangle", "radius": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 148.671751, -30.434466 ], [ 148.671751, -30.040566 ], [ 149.287238, -30.040566 ], [ 149.287238, -30.434466 ], [ 148.671751, -30.434466 ] ] ] ] } },
+{ "type": "Feature", "properties": { "X_leaflet_id": 129, "feature_type": "rectangle", "radius": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 148.787155, -31.812229 ], [ 148.787155, -31.104685 ], [ 149.523541, -31.104685 ], [ 149.523541, -31.812229 ], [ 148.787155, -31.812229 ] ] ] ] } },
+{ "type": "Feature", "properties": { "X_leaflet_id": 139, "feature_type": "circle", "radius": 80088.883277131594 }, "geometry": { "type": "Point", "coordinates": [ 149.842276, -29.262441 ] } },
+{ "type": "Feature", "properties": { "X_leaflet_id": 164, "feature_type": "polygon", "radius": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 150.567671, -30.339695 ], [ 150.078579, -30.718227 ], [ 150.556681, -30.878655 ], [ 150.897397, -30.647364 ], [ 151.287572, -30.183122 ], [ 150.935865, -29.940655 ], [ 150.803975, -30.32073 ], [ 150.567671, -30.339695 ] ] ] ] } }
 ]
 }

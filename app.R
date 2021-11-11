@@ -8,6 +8,7 @@ library(utils)
 library(xfun)
 library(sf)
 library(jsonlite)
+source("functions.R") #read in custom functions
 
 sh <- data.frame()
 
@@ -39,6 +40,8 @@ ui <- fluidPage(titlePanel("Monitoring Plotter"),
                         actionButton("printShapes", h5(strong(
                             "Generate Drawing File"
                         ))),
+                        actionButton("generateGrid", h5(strong(
+                            "Generate grid on selected polygon"))),
                         textOutput("printText")
                     ),
                     mainPanel(leafletOutput("mymap", height = "1000px"),)
@@ -48,12 +51,33 @@ server <- function(input, output, session) {
     clickData <- reactiveValues(clickedPolygon=NULL) #to store click position
     
     observeEvent(input$mymap_shape_click,{
-        clickData <- input$mymap_shape_click
+        clickData$clickedPolygon <- input$mymap_shape_click
+        print(clickData$clickedPolygon$id)
         output$printText <- renderText({
-            print(paste0("latitude: ", clickData$lat, ", longitude: ", clickData$lng ))
+            print(paste0("latitude: ", clickData$clickedPolygon$lat, ", longitude: ", clickData$clickedPolygon$lng ))
         })
     })
     
+    
+    observeEvent(input$generateGrid, {
+        drawnFeatures <- data.frame()
+        reactive(drawnFeatures)
+        drawnFeatures <-
+            input$mymap_draw_all_features
+        if (is.null(drawnFeatures)) {
+            print("nope")
+        } else {
+            feature <-
+                sf::read_sf(jsonlite::toJSON(
+                    drawnFeatures,
+                    force = TRUE,
+                    auto_unbox = TRUE,
+                    digits = NA
+                )) 
+            feature <- feature[which(feature$'X_leaflet_id' == clickData$clickedPolygon$id),]
+            print(feature)
+        }
+    })
     ## TODO: On click (above), store SOMETHING in a reactiveValue to reference against
     ## Test referencing and calling the reference against paste(clickData$lat, clickData$lng)
     

@@ -15,6 +15,7 @@ makeGrid <- function(data, gridsize = NA){
     } else{
       singleGrid <- st_make_grid(bbox, cellsize = gridsize)
     }
+    singleGrid <- singleGrid[single]
     singleGrid <- st_transform(singleGrid, crs = st_crs(data))
     gridList[[i]] <- singleGrid
   } 
@@ -28,23 +29,31 @@ makeGrid <- function(data, gridsize = NA){
 grids <- makeGrid(poly)
 
 
-selectPlots <- function(data, n = 10){
-  if(n > length(data)){
+
+selectPlots <- function(data, n = 10) {
+  if (n > length(data)) {
     stop("Number of plots exceeds maximum possible plots in polygon")
   }
   plots <- list()
-  for (i in 1:n){
-    plots[[i]] <- data[[sample(1:length(data),1)]]
+  for (i in 1:n) {
+    plots[[i]] <- data[[sample(1:length(data), 1)]]
+    # if (!st_within(plots[[i]], data)) {
+    #   
+   }
+    plots <- st_sfc(plots, crs = st_crs(data))
+    return(plots)
   }
-  plots <- st_sfc(plots, crs = st_crs(data))
-  return(plots)
-}
+selected <- selectPlots(grids[[4]], n=20)
 
-selected <- selectPlots(grids[[1]], n=20)
+plots <- list()
+plots[[1]] <- grids[[4]][[sample(1:length(grids[[4]]),1)]]
+plots <- st_sfc(plots, crs = st_crs(poly))
+st_within(plots[[1]], poly[4,])
 
 
 ggplot()+
   geom_sf(data = poly, colour = "black", alpha = 0.2)+
   geom_sf(data = grids[[4]], colour = "red", alpha = 0.1)+
-  geom_sf(data = selected, colour = "blue", alpha = 0.1)
+  geom_sf(data = selected, colour = "blue", alpha = 0.1)+
+  geom_sf(data = plots, fill = "red")
 

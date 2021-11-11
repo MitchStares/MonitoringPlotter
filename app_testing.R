@@ -3,7 +3,7 @@ library(sf)
 library(ggplot2)
 poly <- read_sf("Drawings.geojson")
 
-makeGrid <- function(data, gridsize = NA){
+makeGrid <- function(data, gridsize = NA, within = FALSE){
   gridList <- list()
   for (i in 1:nrow(data)) {
   if (st_geometry_type(data[i, ]) == "MULTIPOLYGON" || 
@@ -15,7 +15,11 @@ makeGrid <- function(data, gridsize = NA){
     } else{
       singleGrid <- st_make_grid(bbox, cellsize = gridsize)
     }
-    singleGrid <- singleGrid[st_within(singleGrid, single) %>% lengths > 0]
+    if(within ==  TRUE){
+      singleGrid <- singleGrid[st_within(singleGrid, single) %>% lengths > 0]
+    } else{
+      singleGrid <- singleGrid[single]
+    }
     singleGrid <- st_transform(singleGrid, crs = st_crs(data))
     gridList[[i]] <- singleGrid
   } 
@@ -47,6 +51,5 @@ selected <- selectPlots(grids[[4]], n=20)
 ggplot()+
   geom_sf(data = poly, colour = "black", alpha = 0.2)+
   geom_sf(data = grids[[4]], colour = "red", alpha = 0.1)+
-  geom_sf(data = selected, colour = "blue", alpha = 0.1)+
-  geom_sf(data = plots, fill = "red")
+  geom_sf(data = selected, colour = "blue", alpha = 0.1)
 

@@ -42,6 +42,15 @@ ui <- fluidPage(titlePanel("Monitoring Plotter"),
                 ))
 
 server <- function(input, output, session) {
+    clickData <- reactiveValues(clickedPolygon=NULL) #to store click position
+    
+    observeEvent(input$mymap_shape_click,{
+        clickData <- input$mymap_shape_click
+        print(clickData)
+        #updateSelectInput(session, inputId = "region", selected = clickData$id
+        #)
+    })
+    
     output$mymap <- renderLeaflet({
         leaflet() %>%
             addTiles(group = "Default", attribution = 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors') %>%

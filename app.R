@@ -38,7 +38,8 @@ ui <- fluidPage(titlePanel("Monitoring Plotter"),
                         ),
                         actionButton("printShapes", h5(strong(
                             "Generate Drawing File"
-                        )))
+                        ))),
+                        textOutput("printText")
                     ),
                     mainPanel(leafletOutput("mymap", height = "1000px"),)
                 ))
@@ -48,10 +49,17 @@ server <- function(input, output, session) {
     
     observeEvent(input$mymap_shape_click,{
         clickData <- input$mymap_shape_click
-        print(clickData)
-        #updateSelectInput(session, inputId = "region", selected = clickData$id
-        #)
+        output$printText <- renderText({
+            print(paste0("latitude: ", clickData$lat, ", longitude: ", clickData$lng ))
+        })
     })
+    
+    ## TODO: On click (above), store SOMETHING in a reactiveValue to reference against
+    ## Test referencing and calling the reference against paste(clickData$lat, clickData$lng)
+    
+    ## Using reference in reactiveValue, assign Generate Grid to work on that reactiveValue
+    ## Output makeGrid and/or selected to leaflet map on new group layer with addPolygon()
+
     
     output$mymap <- renderLeaflet({
         leaflet() %>%

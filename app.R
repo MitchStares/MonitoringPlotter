@@ -1,6 +1,8 @@
 
 library(shiny)
 library(leaflet)
+#Custom Leaflet.extras library with extensions for this project
+#remotes::install.github("https://github.com/MitchStares/leaflet.extras.updated") 
 library(leaflet.extras)
 library(utils)
 library(xfun)

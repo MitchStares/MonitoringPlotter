@@ -2,7 +2,7 @@
 library(shiny)
 library(leaflet)
 #Custom Leaflet.extras library with extensions for this project
-#remotes::install.github("https://github.com/MitchStares/leaflet.extras.updated") 
+#remotes::install_github("https://github.com/MitchStares/leaflet.extras.updated") 
 library(leaflet.extras)
 library(utils)
 library(xfun)
@@ -50,7 +50,8 @@ ui <- fluidPage(titlePanel("Monitoring Plotter"),
 server <- function(input, output, session) {
     #Reactive value for clicking on map
     clickData <- reactiveValues(clickedPolygon=NULL) #to store click position
-    uploadedFile <- reactiveValues(shapefile = NULL)
+    uploadedFile <- reactiveValues(shapefile = NULL) #Figure out a fix so that multiple upload events dont overwrite reactiveValue
+    polygonTracker <- data.frame("id" = c(1), "source" = c("dummy"))
     
     proxy <- leafletProxy("mymap") #Define Proxy for later use
     
@@ -74,7 +75,7 @@ server <- function(input, output, session) {
     
     observeEvent(input$mymap_shape_click,{
         clickData$clickedPolygon <- input$mymap_shape_click
-        print(clickData$clickedPolygon)
+        print(clickData$clickedPolygon$id)
         #Check clicked polygon exists (Drawn)
         # drawnPolys <-
         #     sf::read_sf(jsonlite::toJSON(
@@ -106,43 +107,45 @@ server <- function(input, output, session) {
         reactive(drawnFeatures)
         drawnFeatures <-
             input$mymap_draw_all_features
+        print(input$mymap_draw_all_features)
         if (is.null(drawnFeatures) && is.null(clickData$clickedPolygon) && is.null(uploadedFile$shapefile)) {
             #we have clicked button and drawn nothing or uploaded nothing
             print("nope")
-        } else if(!is.null(clickedData$clickedPolygon)){
-            #clicked button and have clicked something on map
+        }else if(is.null(clickData$clickedPolygon$id)){
+            output$printText <- renderText({
+                print(paste0("Selected Polygon does not contain a unique ID"))})
+        }else if(!is.null(clickData$clickedPolygon)){
+            #clicked button and have previously clicked something on map
+            
+            ## TODO: Fix this section to filter and extract of polygonTracker for more intelligent filtering
+            
+        
             if(is.null(drawnFeatures)){
                 #proceed with uploaded$iter filtering
+                feature <- uploadedFile$shapefile[which(uploadedFile$shapefile$iter == clickData$clickedPolygon$id$iter[[1]]),]
             } else {
-                
+                print("pass")
+                feature <-
+                    sf::read_sf(jsonlite::toJSON(
+                        drawnFeatures,
+                        force = TRUE,
+                        auto_unbox = TRUE,
+                        digits = NA
+                    ))
+                feature <-
+                    feature[which(feature$'X_leaflet_id' == clickData$clickedPolygon$id), ]
             }
         }
-        
-        else {
-            feature <-
-                sf::read_sf(jsonlite::toJSON(
-                    drawnFeatures,
-                    force = TRUE,
-                    auto_unbox = TRUE,
-                    digits = NA
-                ))
-            if(is.null(clickData$clickedPolygon$id)){
-                output$printText <- renderText({
-                    print(paste0("Selected Polygon does not contain a unique ID"))})
-            } else{
-            feature <-
-                feature[which(feature$'X_leaflet_id' == clickData$clickedPolygon$id), ]
-            if(nrow(feature) == 0){
-                
-            }
+        #Check for empty/poor filtering and exit out
+        if(nrow(feature) == 0){
+            print("empty")
+        } else {
             grid <- makeGrid(feature)
             selected <- selectPlots(grid[[1]])
-            proxy <-
-                leafletProxy("mymap") %>% addPolygons(data = selected,
+            proxy %>% addPolygons(data = selected,
                                                       group = "grids",
                                                       color = "red")
             }
-        }
     })
     #Currently breaks on Circle plots. Need to deal with makeGrids ability to do circles. See notion issue
     
@@ -152,6 +155,13 @@ server <- function(input, output, session) {
     ## Using reference in reactiveValue, assign Generate Grid to work on that reactiveValue
     ## Output makeGrid and/or selected to leaflet map on new group layer with addPolygon()
 
+    #Track new drawings, add to static table
+    #TODO: add mymap_draw_deleted_features tracking to remove from this table on delete incase new polys get drawn with same ID
+    observeEvent(input$mymap_draw_new_feature, {
+        id <- input$mymap_draw_new_feature$id
+        row <- c(id, "input$mymap_draw_all_features")
+        polygonTracker <- rbind(polygonTracker, row)
+    })
     
  
     ## Generate Shape List Action Button ##
@@ -202,7 +212,7 @@ server <- function(input, output, session) {
     })
     
     # Intake Spatial File
-    #TODO: Add unique ID to files on upload. 
+    #TODO: Fix uniqueID so multiple upload events will maintain uniqueIDs 
     observeEvent(input$drawingfile, {
         drawFile = input$drawingfile
         req(drawFile)
@@ -212,7 +222,7 @@ server <- function(input, output, session) {
             uploaded <- st_read(dsn = drawFile$datapath)
             uploaded <-
                 st_transform(uploaded, crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
-            uploadedFile$shapefile <- uploaded
+#            uploadedFile$shapefile <- uploaded
         }
         # CSV
         else if (file_ext(drawFile) == "csv") {
@@ -238,8 +248,11 @@ server <- function(input, output, session) {
         for (n in 1:nrow(uploaded)) {
             featureType <- sf::st_geometry_type(uploaded[n,])
             uploaded[n,"iter"] <- 50+n
+            uploadId <- 50+n #add uniqueID and source to polygonTracker
+            uploadRow <- c(uploadId, "uploadFile$shapefile")
+            polygonTracker <- rbind(polygonTracker,uploadRow )
             if(featureType == "POLYGON" || featureType == "MULTIPOLYGON"){
-                proxy %>% addPolygons(data = uploaded[n,],group = "draw",  highlightOptions = highlightOptions(stroke = 4, weight = 2), layerId = uploaded[n,"iter"])
+                proxy %>% addPolygons(data = uploaded[n,],group = "draw", layerId = uploaded[n,"iter"])
             }
             if(featureType == "POINT" || featureType == "MULTIPOINT"){
                 proxy %>% addMarkers(data = uploaded[n,],group = "draw")
@@ -248,6 +261,8 @@ server <- function(input, output, session) {
                 proxy %>% addPolylines(data = uploaded[n,], group = "draw")
             }
         }
+        uploadedFile$shapefile <- uploaded
+        print(uploadedFile$shapefile)
     })
 }
 

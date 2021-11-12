@@ -55,6 +55,8 @@ server <- function(input, output, session) {
         print(clickData$clickedPolygon$id)
         output$printText <- renderText({
             print(paste0("latitude: ", clickData$clickedPolygon$lat, ", longitude: ", clickData$clickedPolygon$lng))
+            #TODO: Add highlighting for selected polygon (and remove previous highlighting)
+            #https://stackoverflow.com/questions/42245302/shiny-leaflet-highlight-polygon
         })
     })
     
@@ -73,12 +75,24 @@ server <- function(input, output, session) {
                     force = TRUE,
                     auto_unbox = TRUE,
                     digits = NA
-                )) 
-            feature <- feature[which(feature$'X_leaflet_id' == clickData$clickedPolygon$id),]
+                ))
+            if(is.null(clickData$clickedPolygon$id)){
+                output$printText <- renderText({
+                    print(paste0("Selected Polygon does not contain a unique ID"))})
+            } else{
+            feature <-
+                feature[which(feature$'X_leaflet_id' == clickData$clickedPolygon$id), ]
             grid <- makeGrid(feature)
-            proxy <- leafletProxy("mymap") %>% addPolygons(data = grid[[1]], group = "grids", color = "red")
+            selected <- selectPlots(grid[[1]])
+            proxy <-
+                leafletProxy("mymap") %>% addPolygons(data = selected,
+                                                      group = "grids",
+                                                      color = "red")
+            }
         }
     })
+    #Currently breaks on Circle plots. Need to deal with makeGrids ability to do circles. See notion issue
+    
     ## TODO: On click (above), store SOMETHING in a reactiveValue to reference against
     ## Test referencing and calling the reference against paste(clickData$lat, clickData$lng)
     

@@ -48,27 +48,77 @@ ui <- fluidPage(titlePanel("Monitoring Plotter"),
                 ))
 
 server <- function(input, output, session) {
+    #Reactive value for clicking on map
     clickData <- reactiveValues(clickedPolygon=NULL) #to store click position
+    uploadedFile <- reactiveValues(shapefile = NULL)
+    
+    proxy <- leafletProxy("mymap") #Define Proxy for later use
+    
+    ## Render Leaflet Map
+    output$mymap <- renderLeaflet({
+        leaflet() %>%
+            addTiles(group = "Default", attribution = 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors') %>%
+            setView(lng = 151,
+                    lat = -33,
+                    zoom = 7) %>%
+            addDrawToolbar(
+                targetGroup = "draw",
+                position = "topleft",
+                editOptions = editToolbarOptions(edit = TRUE)
+            )
+    })
+    
+    ## Click Event ##
+        # Extract data on click, store in reactiveValue
+        # Highlight clicked polygon, remove previous highlights
     
     observeEvent(input$mymap_shape_click,{
         clickData$clickedPolygon <- input$mymap_shape_click
-        print(clickData$clickedPolygon$id)
+        print(clickData$clickedPolygon)
+        #Check clicked polygon exists (Drawn)
+        # drawnPolys <-
+        #     sf::read_sf(jsonlite::toJSON(
+        #         input$mymap_draw_all_features,
+        #         force = TRUE,
+        #         auto_unbox = TRUE,
+        #         digits = NA
+        #     ))
+        # clickPoly <-
+        #     drawnPolys[which(drawnPolys$'X_leaflet_id' == clickData$clickedPolygon$id), ]
+        # #remove previously highlighted polygon
+        # proxy %>% clearGroup("highlighted_polygon")
+        # 
+        # #include data source (clickPoly)
+        # proxy %>% addPolygons(stroke = TRUE, weight = 2, color = "blue",data = clickPoly, group = "highlighted_polygon")
+        
         output$printText <- renderText({
             print(paste0("latitude: ", clickData$clickedPolygon$lat, ", longitude: ", clickData$clickedPolygon$lng))
+            
             #TODO: Add highlighting for selected polygon (and remove previous highlighting)
             #https://stackoverflow.com/questions/42245302/shiny-leaflet-highlight-polygon
+            #TODO: Highlighting could be drastically improved for performance. Reading in the polygon each time is awfully slow. 
         })
     })
     
-    
+    ## Generate Grid Button event ##
     observeEvent(input$generateGrid, {
         drawnFeatures <- data.frame()
         reactive(drawnFeatures)
         drawnFeatures <-
             input$mymap_draw_all_features
-        if (is.null(drawnFeatures)) {
+        if (is.null(drawnFeatures) && is.null(clickData$clickedPolygon) && is.null(uploadedFile$shapefile)) {
+            #we have clicked button and drawn nothing or uploaded nothing
             print("nope")
-        } else {
+        } else if(!is.null(clickedData$clickedPolygon)){
+            #clicked button and have clicked something on map
+            if(is.null(drawnFeatures)){
+                #proceed with uploaded$iter filtering
+            } else {
+                
+            }
+        }
+        
+        else {
             feature <-
                 sf::read_sf(jsonlite::toJSON(
                     drawnFeatures,
@@ -82,6 +132,9 @@ server <- function(input, output, session) {
             } else{
             feature <-
                 feature[which(feature$'X_leaflet_id' == clickData$clickedPolygon$id), ]
+            if(nrow(feature) == 0){
+                
+            }
             grid <- makeGrid(feature)
             selected <- selectPlots(grid[[1]])
             proxy <-
@@ -100,19 +153,8 @@ server <- function(input, output, session) {
     ## Output makeGrid and/or selected to leaflet map on new group layer with addPolygon()
 
     
-    output$mymap <- renderLeaflet({
-        leaflet() %>%
-            addTiles(group = "Default", attribution = 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors') %>%
-            setView(lng = 151,
-                    lat = -33,
-                    zoom = 7) %>%
-            addDrawToolbar(
-                targetGroup = "draw",
-                position = "topleft",
-                editOptions = editToolbarOptions(edit = TRUE)
-            )
-    })
-    # Generate Shape List Action Button
+ 
+    ## Generate Shape List Action Button ##
     observeEvent(input$printShapes, {
         shapedf <- data.frame()
         reactive(shapedf)
@@ -160,7 +202,7 @@ server <- function(input, output, session) {
     })
     
     # Intake Spatial File
-    
+    #TODO: Add unique ID to files on upload. 
     observeEvent(input$drawingfile, {
         drawFile = input$drawingfile
         req(drawFile)
@@ -170,6 +212,7 @@ server <- function(input, output, session) {
             uploaded <- st_read(dsn = drawFile$datapath)
             uploaded <-
                 st_transform(uploaded, crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
+            uploadedFile$shapefile <- uploaded
         }
         # CSV
         else if (file_ext(drawFile) == "csv") {
@@ -192,21 +235,20 @@ server <- function(input, output, session) {
             uploaded <-
                 st_transform(uploaded, crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
         }
-        proxy <- leafletProxy("mymap")
-        for (i in 1:nrow(uploaded)) {
-            featureType <- sf::st_geometry_type(uploaded[i,])
+        for (n in 1:nrow(uploaded)) {
+            featureType <- sf::st_geometry_type(uploaded[n,])
+            uploaded[n,"iter"] <- 50+n
             if(featureType == "POLYGON" || featureType == "MULTIPOLYGON"){
-                proxy %>% addPolygons(data = uploaded[i,],group = "draw")
+                proxy %>% addPolygons(data = uploaded[n,],group = "draw",  highlightOptions = highlightOptions(stroke = 4, weight = 2), layerId = uploaded[n,"iter"])
             }
             if(featureType == "POINT" || featureType == "MULTIPOINT"){
-                proxy %>% addMarkers(data = uploaded[i,],group = "draw")
+                proxy %>% addMarkers(data = uploaded[n,],group = "draw")
             }
             if(featureType == "LINESTRING" || featureType == "MULTILINESTRING") {
-                proxy %>% addPolylines(data = uploaded[i,], group = "draw")
+                proxy %>% addPolylines(data = uploaded[n,], group = "draw")
             }
         }
     })
-    leaflet() %>% addTiles() %>% leaflet.extras::addDrawToolbar()    
 }
 
 shinyApp(ui = ui, server = server)

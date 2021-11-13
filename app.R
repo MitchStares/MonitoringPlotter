@@ -105,47 +105,66 @@ server <- function(input, output, session) {
     observeEvent(input$generateGrid, {
         drawnFeatures <- data.frame()
         reactive(drawnFeatures)
-        drawnFeatures <-
-            input$mymap_draw_all_features
-        print(input$mymap_draw_all_features)
-        if (is.null(drawnFeatures) && is.null(clickData$clickedPolygon) && is.null(uploadedFile$shapefile)) {
+        if (is.null(drawnFeatures) &&
+            is.null(clickData$clickedPolygon) &&
+            is.null(uploadedFile$shapefile)) {
             #we have clicked button and drawn nothing or uploaded nothing
-            print("nope")
-        }else if(is.null(clickData$clickedPolygon$id)){
+            print(
+                "Error: Nothing on map. Just because the button is there, doesn't mean we need to click it"
+            )
+        } else if (is.null(clickData$clickedPolygon$id)) {
             output$printText <- renderText({
-                print(paste0("Selected Polygon does not contain a unique ID"))})
-        }else if(!is.null(clickData$clickedPolygon)){
+                print(paste0("Selected Polygon does not contain a unique ID"))
+            })
+        } else if (!is.null(clickData$clickedPolygon)) {
             #clicked button and have previously clicked something on map
             
             ## TODO: Fix this section to filter and extract of polygonTracker for more intelligent filtering
             
-        
-            if(is.null(drawnFeatures)){
-                #proceed with uploaded$iter filtering
-                feature <- uploadedFile$shapefile[which(uploadedFile$shapefile$iter == clickData$clickedPolygon$id$iter[[1]]),]
-            } else {
-                print("pass")
+            ## TODO: polygonTracker subsetting needs to be able to filter either clickedPolygon$id or clickedPolygon$id$iter[[1]]
+            print(polygonTracker)
+            clickSource <-
+                polygonTracker[which(
+                    polygonTracker[,"id"] == clickData$clickedPolygon$id #||
+                        #polygonTracker$id == clickData$clickedPolygon$id$iter[[1]]
+                ), ]
+            print(clickSource)
+            if (is.null(clickSource) ||
+                is.na(clickSource$source) ||
+                clickSource$source != "uploadFile$shapefile" ||
+                clickSource$source != "input$mymap_draw_all_features") {
+                print("Error: No compatible source detected")
+            } else if (clickSource$source == "input$mymap_draw_all_features") {
+                drawnFeatures <-
+                    input$mymap_draw_all_features #potentially change this to be responsive to dataframe cell
+                print(input$mymap_draw_all_features)
                 feature <-
-                    sf::read_sf(jsonlite::toJSON(
-                        drawnFeatures,
-                        force = TRUE,
-                        auto_unbox = TRUE,
-                        digits = NA
-                    ))
+                    sf::read_sf(
+                        jsonlite::toJSON(
+                            drawnFeatures,
+                            force = TRUE,
+                            auto_unbox = TRUE,
+                            digits = NA
+                        )
+                    )
                 feature <-
-                    feature[which(feature$'X_leaflet_id' == clickData$clickedPolygon$id), ]
+                    feature[which(feature$'X_leaflet_id' == clickData$clickedPolygon$id),]
+            } else if (clickSource$source == "uploadFile$shapefile") {
+                #TODO: This logic needs to be fixed.
+                feature <-
+                    uploadedFile$shapefile[which(uploadedFile$shapefile$iter == clickData$clickedPolygon$id$iter[[1]]), ]
             }
         }
         #Check for empty/poor filtering and exit out
-        if(nrow(feature) == 0){
-            print("empty")
+        if (nrow(feature) == 0) {
+            print("detected feature is empty")
         } else {
             grid <- makeGrid(feature)
             selected <- selectPlots(grid[[1]])
             proxy %>% addPolygons(data = selected,
-                                                      group = "grids",
-                                                      color = "red")
-            }
+                                  group = "grids",
+                                  color = "red")
+        }
     })
     #Currently breaks on Circle plots. Need to deal with makeGrids ability to do circles. See notion issue
     
@@ -158,8 +177,8 @@ server <- function(input, output, session) {
     #Track new drawings, add to static table
     #TODO: add mymap_draw_deleted_features tracking to remove from this table on delete incase new polys get drawn with same ID
     observeEvent(input$mymap_draw_new_feature, {
-        id <- input$mymap_draw_new_feature$id
-        row <- c(id, "input$mymap_draw_all_features")
+        id <- input$mymap_draw_new_feature$properties$`_leaflet_id`
+        row <- data.frame("id" = c(id), "source" = c("input$mymap_draw_all_features"))
         polygonTracker <- rbind(polygonTracker, row)
     })
     

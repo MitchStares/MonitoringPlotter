@@ -79,7 +79,6 @@ server <- function(input, output, session) {
     
     observeEvent(input$mymap_shape_click,{
         clickData$clickedPolygon <- input$mymap_shape_click
-        print(clickData$clickedPolygon$id)
         #Check clicked polygon exists (Drawn)
         # drawnPolys <-
         #     sf::read_sf(jsonlite::toJSON(
@@ -97,7 +96,7 @@ server <- function(input, output, session) {
         # proxy %>% addPolygons(stroke = TRUE, weight = 2, color = "blue",data = clickPoly, group = "highlighted_polygon")
         
         output$printText <- renderText({
-            print(paste0("latitude: ", clickData$clickedPolygon$lat, ", longitude: ", clickData$clickedPolygon$lng))
+            paste0("latitude: ", clickData$clickedPolygon$lat, ", longitude: ", clickData$clickedPolygon$lng)
             
             #TODO: Add highlighting for selected polygon (and remove previous highlighting)
             #https://stackoverflow.com/questions/42245302/shiny-leaflet-highlight-polygon
@@ -170,13 +169,7 @@ server <- function(input, output, session) {
             }
         }
     })
-    #Currently breaks on Circle plots. Need to deal with makeGrids ability to do circles. See notion issue
-    
-    ## TODO: On click (above), store SOMETHING in a reactiveValue to reference against
-    ## Test referencing and calling the reference against paste(clickData$lat, clickData$lng)
-    
-    ## Using reference in reactiveValue, assign Generate Grid to work on that reactiveValue
-    ## Output makeGrid and/or selected to leaflet map on new group layer with addPolygon()
+    #Currently breaks on Circle plots. Need to deal with makeGrids ability to do circles. See github issue
 
     #Track new drawings, add to static table
     #TODO: add mymap_draw_deleted_features tracking to remove from this table on delete incase new polys get drawn with same ID
@@ -245,7 +238,6 @@ server <- function(input, output, session) {
             uploaded <- st_read(dsn = drawFile$datapath)
             uploaded <-
                 st_transform(uploaded, crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
-#            uploadedFile$shapefile <- uploaded
         }
         # CSV
         else if (file_ext(drawFile) == "csv") {

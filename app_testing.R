@@ -53,3 +53,6 @@ ggplot()+
   geom_sf(data = grids[[4]], colour = "red", alpha = 0.1)+
   geom_sf(data = selected, colour = "blue", alpha = 0.1)
 
+
+
+

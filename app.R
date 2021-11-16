@@ -51,7 +51,8 @@ server <- function(input, output, session) {
     #Reactive value for clicking on map
     clickData <- reactiveValues(clickedPolygon=NULL) #to store click position
     uploadedFile <- reactiveValues(shapefile = NULL) #Figure out a fix so that multiple upload events dont overwrite reactiveValue
-    polygonTracker <- data.frame("id" = c(1), "source" = c("dummy"))
+    polygonTracker <- reactiveValues(df = NULL)
+    clickSource <- data.frame()
     
     proxy <- leafletProxy("mymap") #Define Proxy for later use
     
@@ -119,25 +120,18 @@ server <- function(input, output, session) {
         } else if (!is.null(clickData$clickedPolygon)) {
             #clicked button and have previously clicked something on map
             
-            ## TODO: Fix this section to filter and extract of polygonTracker for more intelligent filtering
-            
-            ## TODO: polygonTracker subsetting needs to be able to filter either clickedPolygon$id or clickedPolygon$id$iter[[1]]
-            print(polygonTracker)
-            clickSource <-
-                polygonTracker[which(
-                    polygonTracker[,"id"] == clickData$clickedPolygon$id #||
-                        #polygonTracker$id == clickData$clickedPolygon$id$iter[[1]]
+            if(!any(names(clickData$clickedPolygon$id) == "iter")){
+                clickSource <- polygonTracker$df[which(polygonTracker$df[,"id"] == clickData$clickedPolygon$id), ]
+            } else {
+                clickSource <- polygonTracker$df[which( polygonTracker$df[,"id"] == clickData$clickedPolygon$id$iter[[1]]
                 ), ]
-            print(clickSource)
+            }
             if (is.null(clickSource) ||
-                is.na(clickSource$source) ||
-                clickSource$source != "uploadFile$shapefile" ||
-                clickSource$source != "input$mymap_draw_all_features") {
-                print("Error: No compatible source detected")
+                is.na(clickSource$source)) {
+                print("Error: Source is empty")
             } else if (clickSource$source == "input$mymap_draw_all_features") {
                 drawnFeatures <-
                     input$mymap_draw_all_features #potentially change this to be responsive to dataframe cell
-                print(input$mymap_draw_all_features)
                 feature <-
                     sf::read_sf(
                         jsonlite::toJSON(
@@ -153,14 +147,17 @@ server <- function(input, output, session) {
                 #TODO: This logic needs to be fixed.
                 feature <-
                     uploadedFile$shapefile[which(uploadedFile$shapefile$iter == clickData$clickedPolygon$id$iter[[1]]), ]
+            } else {
+                print("Error: No compatible source detected")
             }
         }
         #Check for empty/poor filtering and exit out
-        if (nrow(feature) == 0) {
+        if (is.null(feature) || nrow(feature) == 0) {
             print("detected feature is empty")
         } else {
             grid <- makeGrid(feature)
             selected <- selectPlots(grid[[1]])
+            proxy %>% addPolygons(data = grid[[1]], group = "grids", color = "blue")
             proxy %>% addPolygons(data = selected,
                                   group = "grids",
                                   color = "red")
@@ -179,7 +176,7 @@ server <- function(input, output, session) {
     observeEvent(input$mymap_draw_new_feature, {
         id <- input$mymap_draw_new_feature$properties$`_leaflet_id`
         row <- data.frame("id" = c(id), "source" = c("input$mymap_draw_all_features"))
-        polygonTracker <- rbind(polygonTracker, row)
+        polygonTracker$df <- rbind(polygonTracker$df, row)
     })
     
  
@@ -267,9 +264,9 @@ server <- function(input, output, session) {
         for (n in 1:nrow(uploaded)) {
             featureType <- sf::st_geometry_type(uploaded[n,])
             uploaded[n,"iter"] <- 50+n
-            uploadId <- 50+n #add uniqueID and source to polygonTracker
-            uploadRow <- c(uploadId, "uploadFile$shapefile")
-            polygonTracker <- rbind(polygonTracker,uploadRow )
+            uploadId <- as.integer(50+n) #add uniqueID and source to polygonTracker
+            uploadRow <- data.frame("id" = c(uploadId), "source" = c("uploadFile$shapefile"))
+            polygonTracker$df <- rbind(polygonTracker$df,uploadRow)
             if(featureType == "POLYGON" || featureType == "MULTIPOLYGON"){
                 proxy %>% addPolygons(data = uploaded[n,],group = "draw", layerId = uploaded[n,"iter"])
             }

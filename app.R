@@ -160,10 +160,14 @@ server <- function(input, output, session) {
         } else {
             grid <- makeGrid(feature)
             selected <- selectPlots(grid[[1]], n = input$numberPlots)
+            if(input$gridDisplay == "gridShow"){
             proxy %>% addPolygons(data = grid[[1]], group = "Grids", color = "blue")
+            }
+            if(input$gridDisplay == "plotShow"){
             proxy %>% addPolygons(data = selected,
                                   group = "Grids",
                                   color = "red")
+            }
         }
     })
     #Currently breaks on Circle plots. Need to deal with makeGrids ability to do circles. See notion issue

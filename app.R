@@ -35,14 +35,11 @@ ui <- fluidPage(titlePanel("Monitoring Plotter"),
                         selectInput(
                             'fileSave',
                             "Select file type",
-                            choices = c("GeoJSON", "ESRI Shapefile")
-                        ),
-                        actionButton("printShapes", h5(strong(
-                            "Generate Drawing File"
-                        ))),
-                        actionButton("generateGrid", h5(strong(
-                            "Generate grid on selected polygon"))),
-                        numericInput("numberPlots", h5(strong("Number of Random Plots")), 10, min = 1,),
+                            choices = c("GeoJSON","ESRI Shapefile")),
+                        actionButton("printShapes", h5(strong("Generate Drawing File"))),
+                        actionButton("generateGrid", h5(strong("Generate grid on selected polygon"))),
+                        numericInput("numberPlots", h5(strong("Number of Random Plots")), 10, min = 1,width = '50%'),
+                        checkboxGroupInput("gridDisplay",h5(strong("Display:")), c("Grid" = "gridShow", "Plots" = "plotShow"), selected = c("gridShow", "plotShow"), inline = TRUE, width = '50%'),
                         textOutput("printText")
                     ),
                     mainPanel(leafletOutput("mymap", height = "1000px"),)

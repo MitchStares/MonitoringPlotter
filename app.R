@@ -160,10 +160,10 @@ server <- function(input, output, session) {
         } else {
             grid <- makeGrid(feature)
             selected <- selectPlots(grid[[1]], n = input$numberPlots)
-            if(input$gridDisplay == "gridShow"){
+            if("gridShow" %in% input$gridDisplay){
             proxy %>% addPolygons(data = grid[[1]], group = "Grids", color = "blue")
             }
-            if(input$gridDisplay == "plotShow"){
+            if( "plotShow" %in% input$gridDisplay){
             proxy %>% addPolygons(data = selected,
                                   group = "Grids",
                                   color = "red")

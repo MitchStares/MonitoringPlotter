@@ -39,7 +39,7 @@ ui <- fluidPage(titlePanel("Monitoring Plotter"),
                         actionButton("printShapes", h5(strong("Generate Drawing File"))),
                         actionButton("generateGrid", h5(strong("Generate grid on selected polygon"))),
                         numericInput("numberPlots", h5(strong("Number of Random Plots")), 10, min = 1,width = '50%'),
-                        checkboxGroupInput("gridDisplay",h5(strong("Display:")), c("Grid" = "gridShow", "Plots" = "plotShow"), selected = c("gridShow", "plotShow"), inline = TRUE, width = '50%'),
+                        checkboxGroupInput("gridDisplay",h5(strong("Render:")), c("Grid" = "gridShow", "Plots" = "plotShow"), selected = c("gridShow", "plotShow"), inline = TRUE, width = '50%'),
                         textOutput("printText")
                     ),
                     mainPanel(leafletOutput("mymap", height = "1000px"),)
@@ -58,14 +58,19 @@ server <- function(input, output, session) {
     output$mymap <- renderLeaflet({
         leaflet() %>%
             addTiles(group = "Default", attribution = 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors') %>%
+            leaflet::addProviderTiles("Esri.WorldTopoMap", group = "ESRI Topo") %>%
             setView(lng = 151,
                     lat = -33,
                     zoom = 7) %>%
             addDrawToolbar(
-                targetGroup = "draw",
+                targetGroup = "Draw",
                 position = "topleft",
                 editOptions = editToolbarOptions(edit = TRUE)
-            )
+            ) %>%
+            addLayersControl(
+                baseGroups = c("Default", "ESRI Topo"),
+                overlayGroups = c("Draw", "Grids"),
+                options = layersControlOptions(collapsed = TRUE)) 
     })
     
     ## Click Event ##
@@ -155,9 +160,9 @@ server <- function(input, output, session) {
         } else {
             grid <- makeGrid(feature)
             selected <- selectPlots(grid[[1]], n = input$numberPlots)
-            proxy %>% addPolygons(data = grid[[1]], group = "grids", color = "blue")
+            proxy %>% addPolygons(data = grid[[1]], group = "Grids", color = "blue")
             proxy %>% addPolygons(data = selected,
-                                  group = "grids",
+                                  group = "Grids",
                                   color = "red")
         }
     })
@@ -266,13 +271,13 @@ server <- function(input, output, session) {
             uploadRow <- data.frame("id" = c(uploadId), "source" = c("uploadFile$shapefile"))
             polygonTracker$df <- rbind(polygonTracker$df,uploadRow)
             if(featureType == "POLYGON" || featureType == "MULTIPOLYGON"){
-                proxy %>% addPolygons(data = uploaded[n,],group = "draw", layerId = uploaded[n,"iter"])
+                proxy %>% addPolygons(data = uploaded[n,],group = "Draw", layerId = uploaded[n,"iter"])
             }
             if(featureType == "POINT" || featureType == "MULTIPOINT"){
-                proxy %>% addMarkers(data = uploaded[n,],group = "draw")
+                proxy %>% addMarkers(data = uploaded[n,],group = "Draw")
             }
             if(featureType == "LINESTRING" || featureType == "MULTILINESTRING") {
-                proxy %>% addPolylines(data = uploaded[n,], group = "draw")
+                proxy %>% addPolylines(data = uploaded[n,], group = "Draw")
             }
         }
         uploadedFile$shapefile <- uploaded

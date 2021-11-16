@@ -42,6 +42,7 @@ ui <- fluidPage(titlePanel("Monitoring Plotter"),
                         ))),
                         actionButton("generateGrid", h5(strong(
                             "Generate grid on selected polygon"))),
+                        numericInput("numberPlots", h5(strong("Number of Random Plots")), 10, min = 1,),
                         textOutput("printText")
                     ),
                     mainPanel(leafletOutput("mymap", height = "1000px"),)
@@ -156,7 +157,7 @@ server <- function(input, output, session) {
             print("detected feature is empty")
         } else {
             grid <- makeGrid(feature)
-            selected <- selectPlots(grid[[1]])
+            selected <- selectPlots(grid[[1]], n = input$numberPlots)
             proxy %>% addPolygons(data = grid[[1]], group = "grids", color = "blue")
             proxy %>% addPolygons(data = selected,
                                   group = "grids",
